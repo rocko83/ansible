@@ -1,0 +1,11 @@
+---
+- hosts: 
+  remote_user:
+  become: yes
+
+  tasks:
+    - name: Ajusta o Sudoers
+      lineinfile: "dest=/etc/sudoers
+               state=present
+               line='%MONGODB        ALL=(ALL) NOPASSWD: ALL'
+               validate='/usr/sbin/visudo -cf %s'"

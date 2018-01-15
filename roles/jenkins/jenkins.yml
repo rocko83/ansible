@@ -1,0 +1,20 @@
+---
+- hosts:
+  remote_user:
+  become: yes
+
+  tasks:
+  - name: Add Jenkins YUM Repository
+    command: sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+
+  - name: Install Jenkins and its dependences
+    yum: name={{item}} state=present
+    with_items:
+      - java-1.8.0-openjdk
+      - git.x86_64
+      - jenkins
+      - wget
+      - vim
+
+  - name: Start Jenkins service
+    service: name=jenkins state=started enabled=yes

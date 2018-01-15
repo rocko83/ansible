@@ -1,0 +1,30 @@
+#!/bin/bash
+cat > /tmp/custom-etcd.service <<EOF
+[Unit]
+Description=custom-etcd
+Documentation=https://github.com/coreos/etcd
+Conflicts=etcd.service
+Conflicts=etcd2.service
+
+[Service]
+Type=notify
+Restart=always
+RestartSec=5s
+LimitNOFILE=40000
+TimeoutStartSec=0
+
+ExecStart={{ etcd_path }}/etcd --name $(hostname) \
+    --data-dir /opt/etcd \
+    --listen-client-urls http://$(ip addr show enp0s8 | grep 192 | head -n 1 | awk '{print $2}' | awk -F \/ '{print $1}' ):2379 \
+    --advertise-client-urls http://$(ip addr show enp0s8 | grep 192 | head -n 1 | awk '{print $2}' | awk -F \/ '{print $1}' ):2379 \
+    --listen-peer-urls http://$(ip addr show enp0s8 | grep 192 | head -n 1 | awk '{print $2}' | awk -F \/ '{print $1}' ):2380 \
+    --initial-advertise-peer-urls http://$(ip addr show enp0s8 | grep 192 | head -n 1 | awk '{print $2}' | awk -F \/ '{print $1}' ):2380 \
+    --initial-cluster {{ host01_name }}=http://{{ host01_ip }}:2380,{{ host02_name }}=http://{{ host02_ip }}:2380,{{ host03_name }}=http://{{ host03_ip }}:2380 \
+    --initial-cluster-token {{ cluster_token }} \
+    --initial-cluster-state new
+
+[Install]
+WantedBy=multi-user.target
+EOF
+mv -f /tmp/custom-etcd.service /etc/systemd/system/custom-etcd.service
+exit 0

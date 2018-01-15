@@ -1,0 +1,81 @@
+---
+  - hosts:  
+    remote_user:
+    become: yes
+    vars:
+      golang_path: /opt/golang
+      etcd_path: /opt/etcd
+      package_path: /opt/packages
+      etcd_package: https://github.com/coreos/etcd/releases/download/v3.2.13/etcd-v3.2.13-linux-amd64.tar.gz
+      golang_package: https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
+      host01_name:
+      host02_name:
+      host03_name:
+      host01_ip:
+      host02_ip:
+      host03_ip:
+      cluster_token:
+    tasks:
+    - name: Remove GOLANG
+      apt:
+        name: golang
+        state: absent
+    - name: Delete etcd git path
+      file:
+        state: absent
+        path: "{{ etcd_path }}/GIT"
+    - name: Delete etcd path
+      file:
+        state: absent
+        path: "{{ etcd_path }}"
+    - name: Delete golang path
+      file:
+        state: absent
+        path: "{{ golang_path }}"
+    - name: install GIT
+      apt:
+        name: git
+        state: present
+    - name: Create directory golang
+      file:
+        path: "{{ golang_path }}"
+        state: directory
+    - name: Unpack GOLANG
+      unarchive:
+        src: "{{ golang_package }}"
+        dest: "{{ golang_path }}"
+        remote_src: yes
+    - name: Set environment variables for GOLANG .profile goroot
+      lineinfile:
+        path: /root/.profile
+        insertafter: EOF
+        state: present
+        line: "export GOROOT={{ golang_path }}/go"
+    - name: Set environment variables for GOLANG .profile path
+      lineinfile:
+        path: /root/.profile
+        insertafter: EOF
+        state: present
+        line: "export PATH=$PATH:$GOROOT/bin"
+    - name: Create directory for etcd package
+      file:
+        path: "{{ package_path }}/etcd"
+        state: directory
+    - name: Unpack etcd
+      unarchive:
+        src: "{{ etcd_package }}"
+        dest: "{{ package_path }}/etcd"
+        remote_src: yes
+    - name: Create symbolic link
+      file:
+        src: "{{ package_path }}/etcd/etcd-v3.2.13-linux-amd64"
+        dest: "{{ etcd_path }}"
+        state: link
+    - name: Transfer startup script
+      template: src=systemd.j2 dest=/opt/etcd.sh mode=0750
+    - name: Generate custom-etcd.service
+      command: /opt/etcd.sh
+      args:
+        chdir: /opt
+    - name: start
+      service: name=custom-etcd state=started enabled=yes
